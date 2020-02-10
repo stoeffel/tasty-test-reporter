@@ -1,0 +1,42 @@
+name: tasty-test-reporter
+version: 0.1.0.0
+synopsis: Producing JUnit-style XML test reports.
+description: Please see the README at <https://github.com/stoeffel/tasty-test-reporter>.
+author: Christoph Hermann
+maintainer: schtoeffel@gmail.com
+copyright: 2020 Christoph Hermann
+homepage: https://github.com/stoeffel/tasty-test-reporter#readme
+license-file: LICENSE
+category: Testing
+github: stoeffel/tasty-test-reporter
+extra-doc-files:
+- README.md
+- CHANGELOG.md
+library:
+  dependencies:
+  - ansi-terminal >= 0.9 && < 0.11
+  - base >= 4.10.1.0 && < 5
+  - concurrent-output >= 1.10 && < 1.11
+  - containers >= 0.6 && < 0.7
+  - directory >= 1.3 && < 1.4
+  - filepath >= 1.4 && < 1.5
+  - junit-xml >= 0.1 && < 0.2
+  - mtl >= 2.2 && < 2.3
+  - safe-exceptions >= 0.1 && < 0.2
+  - stm >= 2.5 && < 2.6
+  - tagged >= 0.8 && < 0.9
+  - tasty >= 0.1 && < 1.3
+  - text >= 1.2 && < 1.3
+  exposed-modules:
+  - Test.Tasty.Runners.Reporter
+  source-dirs: src
+tests:
+  spec:
+    dependencies:
+    - base
+    - tasty >= 1.1 && < 1.3
+    - tasty-hunit
+    - tasty-test-reporter
+    main: Main.hs
+    source-dirs:
+    - test

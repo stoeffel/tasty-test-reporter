@@ -1,0 +1,7 @@
+tasty-test-reporter.cabal
+dist-newstyle
+result
+build
+cache
+packagedb
+dist
