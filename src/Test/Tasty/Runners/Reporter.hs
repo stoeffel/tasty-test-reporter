@@ -278,7 +278,7 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
         Just (TestOnly (OnlyTestFailed str)) -> do
           printLines
             [ prettyPath [red] testName groupNames_,
-              Text.pack resultDescription,
+              Text.pack str,
               "\n"
             ]
           mempty
