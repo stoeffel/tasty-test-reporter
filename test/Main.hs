@@ -15,13 +15,20 @@ tests :: TestTree
 tests =
   testGroup
     "Unit tests"
-    [ testCase "List comparison (smaller length)" $
-        [1, 2, 3] `compare` [1, 2] @?= LT,
-      testCase "List comparison (longer length)" $
-        [1, 2] `compare` [1, 2, 3] @?= GT,
-      testCase "List comparison (EQ length)" $
-        [1, 2, 3] `compare` [1, 2, 3] @?= EQ,
-      testGroup
-        "sub group"
-        [testCase "foo" $ fail "asdf"]
+    [ testCase "List comparison (smaller length)" $ [1, 2] `compare` [1, 2, 3] @?= LT
     ]
+-- Example for failing tests
+-- tests :: TestTree
+-- tests =
+--   testGroup
+--     "Unit tests"
+--     [ testCase "List comparison (smaller length)" $
+--         [1, 2, 3] `compare` [1, 2] @?= LT,
+--       testCase "List comparison (longer length)" $
+--         [1, 2] `compare` [1, 2, 3] @?= GT,
+--       testCase "List comparison (EQ length)" $
+--         [1, 2, 3] `compare` [1, 2, 3] @?= EQ,
+--       testGroup
+--         "sub group"
+--         [testCase "foo" $ fail "asdf"]
+--     ]
