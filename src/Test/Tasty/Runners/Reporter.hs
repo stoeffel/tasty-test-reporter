@@ -331,7 +331,7 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
       mempty
         { testSuites =
             [ JUnit.failed testName
-                & JUnit.stderr (Text.pack resultDescription)
+                & JUnit.stderr ("Test result:\n\n" <> Text.pack resultDescription)
                 & JUnit.time resultTime
                 & inSuite groupNames
             ],
