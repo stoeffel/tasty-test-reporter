@@ -241,7 +241,7 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
       case Exception.fromException err of
         Just TestSkipped -> do
           printLines
-            [ prettyPath [red] testName groupNames_,
+            [ prettyPath [yellow] testName groupNames_,
               "Test was skipped",
               "\n"
             ]
