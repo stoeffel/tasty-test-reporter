@@ -73,15 +73,19 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid (mappend, mempty), Sum (getSum))
 import Data.Proxy (Proxy (Proxy))
 import Data.Semigroup
+import Data.String (fromString)
 import Data.Tagged (Tagged (Tagged))
 import qualified Data.Text as Text
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import Numeric (showFFloat)
+import Prelude hiding (unlines)
+import System.Console.ANSI (hSupportsANSIColor)
 import System.Console.Concurrent (outputConcurrent, withConcurrentOutput)
 import System.Directory (canonicalizePath, createDirectoryIfMissing)
 import System.FilePath (FilePath, takeDirectory)
-import Test.Console.Color (Style, black, green, grey, red, styled, underlined, yellow)
+import System.IO (stdout)
+import Test.Console.Color (Style, Styled, black, green, grey, red, styled, underlined, unlines, unstyled, yellow)
 import qualified Test.Tasty as Tasty
 import qualified Test.Tasty.Options as Tasty
 import qualified Test.Tasty.Runners as Tasty
@@ -255,7 +259,7 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
             & pure
         Just (TestOnly (OnlyTestPassed _)) -> do
           let errorMessage =
-                Text.unlines
+                unlines
                   [ "This test passed, but there is a `Test.only` in your test.",
                     "I failed the test, because it's easy to forget to remove `Test.only`."
                   ]
@@ -268,7 +272,7 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
             { testSuites =
                 [ JUnit.errored testName
                     & JUnit.time resultTime
-                    & JUnit.errorMessage errorMessage
+                    & JUnit.errorMessage (unstyled errorMessage)
                     & inSuite groupNames
                 ],
               hasOnly = True,
@@ -278,7 +282,7 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
         Just (TestOnly (OnlyTestFailed str)) -> do
           printLines
             [ prettyPath [red] testName groupNames_,
-              Text.pack str,
+              fromString str,
               "\n"
             ]
           mempty
@@ -297,14 +301,14 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
           printLines
             [ prettyPath [red] testName groupNames_,
               errorMessage,
-              Text.pack (displayException err),
+              fromString (displayException err),
               "\n"
             ]
           mempty
             { testSuites =
                 [ JUnit.errored testName
                     & JUnit.stderr (Text.pack (displayException err))
-                    & JUnit.errorMessage errorMessage
+                    & JUnit.errorMessage (unstyled errorMessage)
                     & JUnit.time resultTime
                     & inSuite groupNames
                 ],
@@ -325,7 +329,7 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
     Tasty.Failure _ -> do
       printLines
         [ prettyPath [red] testName groupNames_,
-          Text.pack resultDescription,
+          fromString resultDescription,
           "\n"
         ]
       mempty
@@ -392,20 +396,24 @@ printSummary Summary {failures, errors, successes, skipped, hasOnly} duration =
     failedTestsTotal = getSum (failures <> errors)
     skippedTestsTotal = getSum skipped
 
-prettyPath :: Style -> Text -> [Text] -> Text
+prettyPath :: Style -> Text -> [Text] -> Styled Text
 prettyPath style name path =
   mconcat
     [ reverse path
         & map (styled [grey] . (<>) "↓ ")
-        & Text.unlines,
+        & unlines,
       styled style ("✗ " <> name) <> "\n"
     ]
 
 inSuite :: GroupNames -> JUnit.TestReport outcome -> JUnit.TestSuite
 inSuite (GroupNames groupNames) = JUnit.inSuite (Text.intercalate "." groupNames)
 
-printLines :: [Text] -> IO ()
-printLines = outputConcurrent . Text.unlines
+printLines :: [Styled Text] -> IO ()
+printLines ts = do
+  color <- hSupportsANSIColor stdout
+  if color
+    then outputConcurrent (unlines ts)
+    else outputConcurrent (unstyled $ unlines ts)
 
 timeDigits :: Num p => p
 timeDigits = 3
