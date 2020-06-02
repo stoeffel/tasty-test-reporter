@@ -358,7 +358,8 @@ runGroup groupName children (GroupNames groupNames) =
     & TraversalT
 
 printSummary :: Summary -> Tasty.Time -> IO ()
-printSummary Summary {failures, errors, successes, skipped, hasOnly} duration =
+printSummary Summary {failures, errors, successes, skipped, hasOnly} duration = do
+  color <- hSupportsANSIColor stdout
   [ -- Title "TEST RUN ..."
     if hasOnly
       then
@@ -390,8 +391,9 @@ printSummary Summary {failures, errors, successes, skipped, hasOnly} duration =
       else "",
     styled [black] ("Failed:    " <> fromInt failedTestsTotal),
     "\n\n"
-  ]
-    & outputConcurrent . mconcat
+    ]
+    & mconcat
+    & if color then outputConcurrent else outputConcurrent . unstyled
   where
     failedTestsTotal = getSum (failures <> errors)
     skippedTestsTotal = getSum skipped
