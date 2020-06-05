@@ -9,28 +9,54 @@ module Test.Console.Color
     underlined,
     Colored (Colors, NoColors),
     Style,
+    Styled (..),
+    unlines,
+    style,
     styled,
-    maybeStyled,
+    unstyled,
   )
 where
 
-import qualified Data.Text
-import Data.Text (Text)
+import Data.Function (on)
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import Data.String (IsString (..))
+import Prelude hiding (unlines)
 import qualified System.Console.ANSI as Console
+import System.Console.Concurrent (Outputable (..))
 
 type Style = [Console.SGR]
 
-code :: Style -> Text
-code = Data.Text.pack . Console.setSGRCode
+code :: IsString a => Style -> a
+code = fromString . Console.setSGRCode
 
-styled :: Style -> Text -> Text
-styled col t = code col <> t <> code [reset]
+newtype Styled a = Styled { getStyled :: Seq (Either [Console.SGR] a) }
 
-maybeStyled :: Colored -> Style -> Text -> Text
-maybeStyled colored styles text =
-  case colored of
-    Colors -> styled styles text
-    NoColors -> text
+instance Semigroup (Styled a) where
+  (<>) a b = Styled (on (<>) getStyled a b)
+
+instance Monoid (Styled a) where
+  mempty = Styled mempty
+
+instance IsString a => IsString (Styled a) where
+  fromString = Styled . Seq.singleton . Right . fromString
+
+instance (IsString a, Outputable a) => Outputable (Styled a) where
+  toOutput = foldMap (either code toOutput) . getStyled
+
+unlines :: IsString t => [Styled t] -> Styled t
+unlines [] = mempty
+unlines (t : ts) = t <> fromString "\n" <> unlines ts
+
+style :: Style -> Styled a
+style col = (Styled . Seq.singleton) (Left col)
+
+styled :: Style -> t -> Styled t
+styled col t =
+  style col <> (Styled . Seq.singleton) (Right t) <> style [reset]
+
+unstyled :: Monoid a => Styled a -> a
+unstyled = foldMap (either mempty id) . getStyled
 
 data Colored = Colors | NoColors
 
