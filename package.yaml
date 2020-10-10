@@ -1,5 +1,5 @@
 name: tasty-test-reporter
-version: 0.1.1.1
+version: 0.1.1.2
 synopsis: Producing JUnit-style XML test reports.
 description: Please see the README at <https://github.com/stoeffel/tasty-test-reporter>.
 author: Christoph Hermann
