@@ -1,5 +1,7 @@
 # tasty-test-reporter
 
+[![Build Status](https://travis-ci.com/stoeffel/tasty-test-reporter.svg?branch=master)](https://travis-ci.com/stoeffel/tasty-test-reporter)
+
 An ingredient for tasty that prints a summary and outputs junit xml that works with jenkins.
 
 ![output from reporter](https://github.com/stoeffel/tasty-test-reporter/blob/master/output.png)
