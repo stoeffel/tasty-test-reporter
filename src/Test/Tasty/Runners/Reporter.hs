@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -79,7 +80,6 @@ import qualified Data.Text as Text
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import Numeric (showFFloat)
-import Prelude hiding (unlines)
 import System.Console.ANSI (hSupportsANSIColor)
 import System.Console.Concurrent (outputConcurrent, withConcurrentOutput)
 import System.Directory (canonicalizePath, createDirectoryIfMissing)
@@ -90,6 +90,7 @@ import qualified Test.Tasty as Tasty
 import qualified Test.Tasty.Options as Tasty
 import qualified Test.Tasty.Runners as Tasty
 import qualified Text.XML.JUnit as JUnit
+import Prelude hiding (unlines)
 
 -- | Ingredient for `Tasty.defaultMainWithIngredients`
 -- Runs all tests and outputs a summary as well as the failing tests.
@@ -116,7 +117,6 @@ newtype JunitXMLPath = JunitXMLPath FilePath
   deriving (Typeable)
 
 instance Tasty.IsOption (Maybe JunitXMLPath) where
-
   defaultValue = Nothing
 
   parseValue = Just . Just . JunitXMLPath
@@ -188,7 +188,11 @@ runner options testTree path statusMap = withConcurrentOutput $ do
     Tasty.foldTestTree
       Tasty.trivialFold
         { Tasty.foldSingle = runTest statusMap,
+#if MIN_VERSION_tasty(1,4,0)
+          Tasty.foldGroup = \_ -> runGroup
+#else
           Tasty.foldGroup = runGroup
+#endif
         }
       options
       testTree
