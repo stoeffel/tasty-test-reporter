@@ -10,7 +10,7 @@ self: super:
   haskellPackages = super.haskellPackages.extend (haskellSelf: haskellSuper: {
     junit-xml = let
       src = builtins.fetchGit {
-        url = "git@github.com:jwoudenberg/junit-xml";
+        url = "https://github.com/jwoudenberg/junit-xml.git";
         rev = "9b5745c3c190205f662233abe5e3bf65e12fd55c";
       };
     in self.haskell.lib.dontCheck
