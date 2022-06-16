@@ -248,11 +248,11 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
     Tasty.Failure (Tasty.TestThrewException err) ->
       case Exception.fromException err of
         Just TestSkipped -> do
-          printLines
-            [ prettyPath [yellow] testName groupNames_,
-              "Test was skipped",
-              "\n"
-            ]
+          -- printLines
+          --   [ prettyPath [yellow] testName groupNames_,
+          --     "Test was skipped",
+          --     "\n"
+          --   ]
           mempty
             { testSuites =
                 [ JUnit.skipped testName
@@ -267,11 +267,11 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
                   [ "This test passed, but there is a `Test.only` in your test.",
                     "I failed the test, because it's easy to forget to remove `Test.only`."
                   ]
-          printLines
-            [ prettyPath [red] testName groupNames_,
-              errorMessage,
-              "\n"
-            ]
+          -- printLines
+          --   [ prettyPath [red] testName groupNames_,
+          --     errorMessage,
+          --     "\n"
+          --   ]
           mempty
             { testSuites =
                 [ JUnit.errored testName
@@ -284,11 +284,11 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
             }
             & pure
         Just (TestOnly (OnlyTestFailed str)) -> do
-          printLines
-            [ prettyPath [red] testName groupNames_,
-              fromString str,
-              "\n"
-            ]
+          -- printLines
+          --   [ prettyPath [red] testName groupNames_,
+          --     fromString str,
+          --     "\n"
+          --   ]
           mempty
             { testSuites =
                 [ JUnit.failed testName
@@ -302,12 +302,12 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
             & pure
         _ -> do
           let errorMessage = "Test threw an exception"
-          printLines
-            [ prettyPath [red] testName groupNames_,
-              errorMessage,
-              fromString (displayException err),
-              "\n"
-            ]
+          -- printLines
+          --   [ prettyPath [red] testName groupNames_,
+          --     errorMessage,
+          --     fromString (displayException err),
+          --     "\n"
+          --   ]
           mempty
             { testSuites =
                 [ JUnit.errored testName
@@ -331,11 +331,11 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
         }
         & pure
     Tasty.Failure _ -> do
-      printLines
-        [ prettyPath [red] testName groupNames_,
-          fromString resultDescription,
-          "\n"
-        ]
+      -- printLines
+      --   [ prettyPath [red] testName groupNames_,
+      --     fromString resultDescription,
+      --     "\n"
+      --   ]
       mempty
         { testSuites =
             [ JUnit.failed testName
