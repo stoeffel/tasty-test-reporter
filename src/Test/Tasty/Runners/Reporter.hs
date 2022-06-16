@@ -59,13 +59,16 @@ module Test.Tasty.Runners.Reporter
 
     -- * Support for running only one test (example usage coming soon)
     OnlyTestResult (OnlyTestPassed, OnlyTestFailed),
+
+    -- * Support for controlling what is printed to the console
+    ConsolePrintPolicy (..)
   )
 where
 
 import qualified Control.Concurrent.STM as STM
 import qualified Control.Exception.Safe as Exception
 import Control.Exception.Safe (displayException)
-import Control.Monad (Monad)
+import Control.Monad (Monad, when)
 import Control.Monad.IO.Class (liftIO)
 import qualified Control.Monad.State as State
 import Data.Function ((&))
@@ -96,11 +99,33 @@ import Prelude hiding (unlines)
 -- Runs all tests and outputs a summary as well as the failing tests.
 -- Optionally takes `--xml=report.xml` and outputs junit xml.
 ingredient :: Tasty.Ingredient
-ingredient =
+ingredient = ingredientWithConsolePrintPolicy PrintFailures
+
+-- | Ingredient for `Tasty.defaultMainWithIngredients`
+-- Runs all tests and outputs a summary as well as the failing tests.
+-- Optionally takes `--xml=report.xml` and outputs junit xml.
+--
+-- Example:
+--
+-- @
+--     import Test.Tasty
+--     import Test.Tasty.HUnit
+--     import qualified Test.Tasty.Runners.Reporter as Reporter
+--
+--     main = defaultMainWithIngredients [Reporter.ingredientWithConsolePrintPolicy DontPrintToConsole] tests
+--
+--     tests :: TestTree
+-- @
+ingredientWithConsolePrintPolicy :: ConsolePrintPolicy -> Tasty.Ingredient
+ingredientWithConsolePrintPolicy consolePrintPolicy =
   Tasty.TestReporter optionDescription $ \options testTree ->
     Tasty.lookupOption options
-      & runner options testTree
+      & runner consolePrintPolicy options testTree
       & Just
+
+-- | Type for setting printing policy
+data ConsolePrintPolicy = PrintFailures | DontPrintToConsole
+  deriving (Eq, Show)
 
 -- | Types for skipping tests. (example coming soon)
 data SkippingTests = TestSkipped | TestOnly OnlyTestResult deriving (Show)
@@ -178,16 +203,17 @@ optionDescription :: [Tasty.OptionDescription]
 optionDescription = [Tasty.Option (Proxy :: Proxy (Maybe JunitXMLPath))]
 
 runner ::
+  ConsolePrintPolicy ->
   Tasty.OptionSet ->
   Tasty.TestTree ->
   Maybe JunitXMLPath ->
   IntMap.IntMap (STM.TVar Tasty.Status) ->
   IO (Tasty.Time -> IO Bool)
-runner options testTree path statusMap = withConcurrentOutput $ do
+runner consolePrintPolicy options testTree path statusMap = withConcurrentOutput $ do
   (summary, _) <-
     Tasty.foldTestTree
       Tasty.trivialFold
-        { Tasty.foldSingle = runTest statusMap,
+        { Tasty.foldSingle = runTest consolePrintPolicy statusMap,
 #if MIN_VERSION_tasty(1,4,0)
           Tasty.foldGroup = \_ -> runGroup
 #else
@@ -212,13 +238,14 @@ createOutputs summary@Summary {errors, failures, testSuites, hasOnly} maybePath 
   pure (getSum (failures `mappend` errors) == 0 && not hasOnly)
 
 runTest ::
+  ConsolePrintPolicy ->
   IntMap.IntMap (STM.TVar Tasty.Status) ->
   o ->
   Tasty.TestName ->
   t ->
   GroupNames ->
   TraversalT StateIO Summary
-runTest statusMap _ testName_ _ groupNames = TraversalT $ do
+runTest consolePrintPolicy statusMap _ testName_ _ groupNames = TraversalT $ do
   let testName = Text.pack testName_
   index <- State.get
   result <- liftIO $ STM.atomically $ do
@@ -230,10 +257,10 @@ runTest statusMap _ testName_ _ groupNames = TraversalT $ do
       Tasty.Done result -> pure result
       _ -> STM.retry
   _ <- State.modify (+ 1)
-  liftIO (resultToSummary groupNames testName result)
+  liftIO (resultToSummary consolePrintPolicy groupNames testName result)
 
-resultToSummary :: GroupNames -> Text -> Tasty.Result -> IO Summary
-resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.resultTime, Tasty.resultDescription} =
+resultToSummary :: ConsolePrintPolicy -> GroupNames -> Text -> Tasty.Result -> IO Summary
+resultToSummary consolePrintPolicy groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.resultTime, Tasty.resultDescription} =
   case resultOutcome of
     Tasty.Success ->
       mempty
@@ -248,11 +275,12 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
     Tasty.Failure (Tasty.TestThrewException err) ->
       case Exception.fromException err of
         Just TestSkipped -> do
-          -- printLines
-          --   [ prettyPath [yellow] testName groupNames_,
-          --     "Test was skipped",
-          --     "\n"
-          --   ]
+          when (consolePrintPolicy == PrintFailures) $
+            printLines
+              [ prettyPath [yellow] testName groupNames_,
+                "Test was skipped",
+                "\n"
+              ]
           mempty
             { testSuites =
                 [ JUnit.skipped testName
@@ -267,11 +295,12 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
                   [ "This test passed, but there is a `Test.only` in your test.",
                     "I failed the test, because it's easy to forget to remove `Test.only`."
                   ]
-          -- printLines
-          --   [ prettyPath [red] testName groupNames_,
-          --     errorMessage,
-          --     "\n"
-          --   ]
+          when (consolePrintPolicy == PrintFailures) $
+            printLines
+              [ prettyPath [red] testName groupNames_,
+                errorMessage,
+                "\n"
+              ]
           mempty
             { testSuites =
                 [ JUnit.errored testName
@@ -284,11 +313,12 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
             }
             & pure
         Just (TestOnly (OnlyTestFailed str)) -> do
-          -- printLines
-          --   [ prettyPath [red] testName groupNames_,
-          --     fromString str,
-          --     "\n"
-          --   ]
+          when (consolePrintPolicy == PrintFailures) $
+            printLines
+              [ prettyPath [red] testName groupNames_,
+                fromString str,
+                "\n"
+              ]
           mempty
             { testSuites =
                 [ JUnit.failed testName
@@ -302,12 +332,13 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
             & pure
         _ -> do
           let errorMessage = "Test threw an exception"
-          -- printLines
-          --   [ prettyPath [red] testName groupNames_,
-          --     errorMessage,
-          --     fromString (displayException err),
-          --     "\n"
-          --   ]
+          when (consolePrintPolicy == PrintFailures) $
+            printLines
+              [ prettyPath [red] testName groupNames_,
+                errorMessage,
+                fromString (displayException err),
+                "\n"
+              ]
           mempty
             { testSuites =
                 [ JUnit.errored testName
@@ -331,11 +362,12 @@ resultToSummary groupNames testName Tasty.Result {Tasty.resultOutcome, Tasty.res
         }
         & pure
     Tasty.Failure _ -> do
-      -- printLines
-      --   [ prettyPath [red] testName groupNames_,
-      --     fromString resultDescription,
-      --     "\n"
-      --   ]
+      when (consolePrintPolicy == PrintFailures) $
+        printLines
+          [ prettyPath [red] testName groupNames_,
+            fromString resultDescription,
+            "\n"
+          ]
       mempty
         { testSuites =
             [ JUnit.failed testName
