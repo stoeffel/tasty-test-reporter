@@ -53,6 +53,7 @@
 -- @
 module Test.Tasty.Runners.Reporter
   ( ingredient,
+    ingredientWithConsolePrintPolicy,
 
     -- * Support for skipping tests (example usage coming soon)
     SkippingTests (TestSkipped, TestOnly),
