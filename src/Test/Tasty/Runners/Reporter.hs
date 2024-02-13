@@ -215,7 +215,9 @@ runner consolePrintPolicy options testTree path statusMap = withConcurrentOutput
     Tasty.foldTestTree
       Tasty.trivialFold
         { Tasty.foldSingle = runTest consolePrintPolicy statusMap,
-#if MIN_VERSION_tasty(1,4,0)
+#if MIN_VERSION_tasty(1,5,0)
+          Tasty.foldGroup = \_ groupName children -> runGroup groupName (mconcat children)
+#elif MIN_VERSION_tasty(1,4,0)
           Tasty.foldGroup = \_ -> runGroup
 #else
           Tasty.foldGroup = runGroup
